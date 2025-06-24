@@ -7,7 +7,9 @@ import numpy as np
 from iceboot.iceboot_session import getIcebootSession
 # session = getIcebootSession(devFile="/dev/tty.usbserial-FT5NADCZ", baudrate=1000000)
 
-
+# file_name = "mMB_accelerometer_magnetometerTiltMay29.txt"
+file_name = "mDOMMB_accelerometer_magnetometerTiltMay29_280.txt"
+print("Hi")
 
 
 def tilt_angle(nx,ny,nz):
@@ -82,11 +84,15 @@ finally:
 #         print("no exception")
 #     finally:                
 #         session = getIcebootSession(devFile="/dev/tty.usbserial-FT5NADCZ", baudrate=1000000)
+with open(f'/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/{file_name}', 'a+') as fh2:
+    print(f'/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/{file_name}')
+    fh2.write(f"angle gx gy gz bx by bz\n")
+
 for irotation in range(0,361,10)[:]:
     print(f"rotation {irotation}")
     val = input("Enter y for next measurement: ")
     if val == "y":
-        with open('/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mMB_accelerometer_magnetometerTiltMay16.txt', 'a+') as fh2:
+        with open(f'/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/{file_name}', 'a+') as fh2:
             for i in range(1,11):
                 gx,gy,gz = session.readAccelerometerXYZ()
                 bx,by,bz = session.readMagnetometerXYZ()
@@ -111,5 +117,7 @@ for irotation in range(0,361,10)[:]:
                 gx,gy,gz = session.readAccelerometerXYZ()
                 bx,by,bz = session.readMagnetometerXYZ()
                 fh2.write(f"{irotation}D {gx} {gy} {gz} {bx} {by} {bz}\n")
+    else:
+        break
    
 

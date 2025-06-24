@@ -19,22 +19,417 @@ plotFolder = home+"/research_ua/icecube/upgrade/upgrade_comissioning/plots/"
 # print(degg_list)
 
 colorsCustom = ['#8dd3c7','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69']
+B_gallallee = 48.1428 #muT
 
 
 drive = "/Users/epaudel/Library/CloudStorage/OneDrive-TheUniversityofAlabama/"
 accelerometer_readings = drive+"research_notes/references/upgrade_comissioning/mDOM_orientations/accelerometer_measurement.xlsx"
  
-mDOM_tilt_data = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mDOMMB_accelerometer_magnetometerTiltMay16.txt"
-mMB_tilt_data = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mMB_accelerometer_magnetometerTiltMay16.txt"
+# mDOM_tilt_data = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mDOMMB_accelerometer_magnetometerTiltMay16.txt"
+# mMB_tilt_data = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mMB_accelerometer_magnetometerTiltMay16.txt"
+#data format {gx} {gy} {gz} {bx} {by} {bz} for 0 to 90 degree angles and ABCD tilts
+
+#new measurement taken on May 29 2025 for full 360 rotation and acceclerometer mMB and mDOMMB
+mDOM_tilt_data = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mDOMMB_accelerometer_magnetometerTiltMay29.txt"
+mMB_tilt_data = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/mMB_accelerometer_magnetometerTiltMay29.txt"
+
 
 
 import pandas as pd
 
-df = pd.read_csv(mDOM_tilt_data,header=0)
-print(df.head)
+df_mDOMMB = pd.read_csv(mDOM_tilt_data,header=0,sep=" ")
+df_mMB = pd.read_csv(mMB_tilt_data,header=0,sep=" ")
+# print(df.head)
+# print(df.columns.values)
+# print(df[df["angle"]== "0"])
+# measured_angles = list(set(df_mDOMMB["angle"].values))
+# print(f"measured angles {measured_angles}")
+# measured_angles = sorted(measured_angles)
+measured_angles = [f"{i}{j}" for i in range(0,361,10) for j in ["","A","B","C","D"]]
+print(measured_angles)
+# print(f"measured angles {measured_angles}")
+def get_sub_df(df,angle):
+    return df[df["angle"]==angle]
+
+def tilt_angle(nx,ny,nz):
+    '''
+    calculate tilt angle
+    '''
+    return np.arctan2(np.sqrt(nx*nx + ny*ny),nz)
+
+def to_spherical(x,y,z):
+    '''
+    converts cartesian coordinates (x,y,z) to spherical (r,theta,phi)
+    '''
+    r = np.sqrt(x*x+y*y+z*z)
+    theta = np.arctan2(np.sqrt(x*x + y*y),z)
+    phi = np.arctan2(y,x)
+    #####to ensure phi is positive
+    if phi < 0.0:
+        phi_pos = phi + 2*np.pi
+    else:
+        phi_pos = phi
+    return r,theta,phi_pos
+
+def to_spherical_rotated(x,y,z):
+    '''
+    case when sensor is rotated with x axis pointing up (z direction)
+    '''
+    return to_spherical(z,y,x)
+
+def to_spherical_list(x,y,z):
+    '''
+    converts list of cartesian coordinates (x,y,z) to spherical (r,theta,phi)
+    '''
+    r_list = []
+    theta_list = []
+    phi_list = []
+    for ix,iy,iz in zip(x,y,z):
+        r,theta,phi = to_spherical(ix,iy,iz)
+        r_list.append(r)
+        theta_list.append(theta)
+        phi_list.append(phi)
+    return r_list,theta_list,phi_list
+
+def to_spherical_list_rotated(x,y,z):
+    '''
+    when sensor is rotated with x axis pointing up
+    '''
+    return to_spherical_list(z,y,x)
+
+
+
+
+
+def get_mean(x,y,z):
+    # print(imagnetometer_readings)
+    ig_list = []
+    itheta_list = []
+    iphi_list = []
+    for index, irow in iaccelerometer_readings.iterrows():
+        # print(f"{index} {irow}")
+        ig,itheta,iphi = to_spherical(irow["gx"],irow["gy"],irow["gz"])
+        ig_list.append(ig)
+        itheta_list.append(itheta)
+        iphi_list.append(iphi)
+        # print(f"gravity {ig} m/s2 {np.rad2deg(itheta)} {np.rad2deg(iphi)}")
+    for ix in [ig_list,itheta_list,iphi_list]:
+        accelerometer_sphe_dict[f"{iangle}"].append(np.mean(ix))
+        accelerometer_sphe_dict[f"{iangle}"].append(np.std(ix))
+    # print(f"{iaccelerometer_readings["gx"].values}")
+    for jx in [iaccelerometer_readings["gx"].values,iaccelerometer_readings["gy"].values,iaccelerometer_readings["gz"].values]:
+        accelerometer_cart_dict[f"{iangle}"].append(np.mean(jx))
+        accelerometer_cart_dict[f"{iangle}"].append(np.std(jx))
+
+def meas_from_df(df,sensor_rotation):
+    print(df)
+    print(df["gx"])
+    magnetometer_cart_dict = {}
+    magnetometer_sphe_dict = {}
+    accelerometer_cart_dict = {}
+    accelerometer_sphe_dict = {}
+
+    for iangle in measured_angles:
+        accelerometer_cart_dict[f"{iangle}"] = []
+        accelerometer_sphe_dict[f"{iangle}"] = []
+        magnetometer_cart_dict[f"{iangle}"] = []
+        magnetometer_sphe_dict[f"{iangle}"] = []
+
+    for iangle in measured_angles[:]:
+        sub_df = get_sub_df(df,iangle)
+        # print(iangle)
+        # print(sub_df)
+        bx,by,bz = sub_df[["bx","by","bz"]].values.T
+        if not sensor_rotation:
+            b,theta_b,phi_b = to_spherical_list(bx,by,bz)
+        else:
+            b,theta_b,phi_b = to_spherical_list_rotated(bx,by,bz)
+        gx,gy,gz = sub_df[["gx","gy","gz"]].values.T
+        if not sensor_rotation:
+            g,theta_g,phi_g = to_spherical_list(gx,gy,gz)
+        else:
+            g,theta_g,phi_g = to_spherical_list_rotated(gx,gy,gz)
+        for ix in [b,theta_b,phi_b]:
+            magnetometer_sphe_dict[f"{iangle}"].append(np.mean(ix))
+            magnetometer_sphe_dict[f"{iangle}"].append(np.std(ix))
+        # print(f"{iaccelerometer_readings["gx"].values}")
+        for jx in [bx,by,bz]:
+            magnetometer_cart_dict[f"{iangle}"].append(np.mean(jx))
+            magnetometer_cart_dict[f"{iangle}"].append(np.std(jx))
+        for ix in [g,theta_g,phi_g]:
+            accelerometer_sphe_dict[f"{iangle}"].append(np.mean(ix))
+            accelerometer_sphe_dict[f"{iangle}"].append(np.std(ix))
+        # print(f"{iaccelerometer_readings["gx"].values}")
+        for jx in [gx,gy,gz]:
+            accelerometer_cart_dict[f"{iangle}"].append(np.mean(jx))
+            accelerometer_cart_dict[f"{iangle}"].append(np.std(jx))
+    return accelerometer_cart_dict,accelerometer_sphe_dict,magnetometer_cart_dict,magnetometer_sphe_dict
+
+accelerometer_cart_dict_mDOMMB,accelerometer_sphe_dict_mDOMMB,magnetometer_cart_dict_mDOMMB,magnetometer_sphe_dict_mDOMMB = meas_from_df(df_mDOMMB,sensor_rotation=False)
+# accelerometer_cart_dict_mMB,accelerometer_sphe_dict_mMB,magnetometer_cart_dict_mMB,magnetometer_sphe_dict_mMB = meas_from_df(df_mMB,sensor_rotation=True) #setup 1 May 16
+accelerometer_cart_dict_mMB,accelerometer_sphe_dict_mMB,magnetometer_cart_dict_mMB,magnetometer_sphe_dict_mMB = meas_from_df(df_mMB,sensor_rotation=False) #setup 2 May 29
+
+# plane = [f"{n}" for n in range(0,91,10)]
+plane = [f"{n}" for n in range(0,361,10)]
+A_tilts = [ix for ix in measured_angles if "A" in ix]
+B_tilts = [ix for ix in measured_angles if "B" in ix]
+C_tilts = [ix for ix in measured_angles if "C" in ix]
+D_tilts = [ix for ix in measured_angles if "D" in ix]
+
+plane_int = [int(i) for i in range(0,361,10)]
+
+def plot_accelerometer_xyz(accelerometer_cart_dict,MB):
+    fig = plt.figure(figsize=(8,5*3))
+    gs = gridspec.GridSpec(nrows=3,ncols=1, figure=fig)
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[1,0])
+    ax3 = fig.add_subplot(gs[2,0])
+    # ax.errorbar(rotations,zenith,yerr=zenith_stds,fmt="o",label="zenith")
+    # print(len(rotations_list),len(azimuth),azimuth)
+    for ilabel,isetting in zip(["no tilt","tab A","tab B","tab C","tab D"],[plane, A_tilts, B_tilts,C_tilts,D_tilts]):
+        angles = []
+        gx_list = []
+        gx_err_list = []
+        gy_list = []
+        gy_err_list = []
+        gz_list = []
+        gz_err_list = []
+        for iangle in isetting:
+            print("############################################################################")
+            print(iangle)
+            # print(accelerometer_cart_dict)
+            print(accelerometer_cart_dict[iangle])
+            gx,gx_err,gy,gy_err,gz,gz_err = accelerometer_cart_dict[iangle]
+            gx_list.append(gx)
+            gx_err_list.append(gx_err)
+            gy_list.append(gy)
+            gy_err_list.append(gy_err)
+            gz_list.append(gz)
+            gz_err_list.append(gz_err)
+        ax1.errorbar(plane_int,gx_list,yerr=gx_err_list,fmt="o",label=f"{ilabel}")
+        ax2.errorbar(plane_int,gy_list,yerr=gy_err_list,fmt="o",label=f"{ilabel}")
+        ax3.errorbar(plane_int,gz_list,yerr=gz_err_list,fmt="o",label=f"{ilabel}")
+
+
+        # nx_means,nx_stds,ny_means,ny_stds,nz_means,nz_stds,g_means,g_stds,gxy_means,gxy_stds,azimuth_means,azimuth_stds, zenith_means,zenith_stds = get_means(this_df)
+        # ax.errorbar(rotations_list,gxy_means,yerr=gxy_stds,fmt="o",label=f"{isetting}")
+    # ax.errorbar(rotations,gxy_means,yerr=gxy_stds,fmt="o",label="azimuth")
+    # ax.errorbar(rotations,B,yerr=g_stds,fmt="o",label="B")
+    for ax in [ax1,ax2,ax3]:
+        ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
+        ax.set_xlabel(r" rotation [$^{\circ}$]", fontsize=22)
+        
+        ax.grid(True,alpha=0.6)
+        ax.set_xticks(np.linspace(0,360,9))
+        # ax.set_yticks(np.linspace(0,360,9))
+        # ax.set_aspect('equal')
+        ax.legend(ncols=5)
+    ax1.set_ylabel(r" g$_x$ [ms$^{-2}$]", fontsize=22)
+    ax2.set_ylabel(r" g$_y$ [ms$^{-2}$]", fontsize=22)
+    ax3.set_ylabel(r" g$_z$ [ms$^{-2}$]", fontsize=22)
+    # ax1.set_ylim(-1.5,1.5)
+    # ax2.set_ylim(-1.5,1.5)
+    # ax3.set_ylim(8,11)
+    # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_gxgygz{MB}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_gxgygz{MB}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+# plot_accelerometer_xyz(accelerometer_cart_dict_mDOMMB,MB="mDOMMB")
+plot_accelerometer_xyz(accelerometer_cart_dict_mMB,MB="mMB")
+
+
+def plot_accelerometer_rθφ(accelerometer_sphe_dict,MB):
+    fig = plt.figure(figsize=(8,5*3))
+    gs = gridspec.GridSpec(nrows=3,ncols=1, figure=fig)
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[1,0])
+    ax3 = fig.add_subplot(gs[2,0])
+    # ax.errorbar(rotations,zenith,yerr=zenith_stds,fmt="o",label="zenith")
+    # print(len(rotations_list),len(azimuth),azimuth)
+    for ilabel,isetting in zip(["no tilt","tab A","tab B","tab C","tab D"],[plane, A_tilts, B_tilts,C_tilts,D_tilts]):
+        angles = []
+        g_list = []
+        g_err_list = []
+        theta_list = []
+        theta_err_list = []
+        phi_list = []
+        phi_err_list = []
+        for iangle in isetting:
+            g,g_err,theta,theta_err,phi,phi_err = accelerometer_sphe_dict[iangle]
+            g_list.append(g)
+            g_err_list.append(g_err)
+            theta_list.append(np.rad2deg(theta))
+            theta_err_list.append(np.rad2deg(theta_err))
+            phi_list.append(np.rad2deg(phi))
+            phi_err_list.append(np.rad2deg(phi_err))
+        ax1.errorbar(plane_int,g_list,yerr=g_err_list,fmt="o",label=f"{ilabel}")
+        ax2.errorbar(plane_int,theta_list,yerr=theta_err_list,fmt="o",label=f"{ilabel}")
+        ax3.errorbar(plane_int,phi_list,yerr=phi_err_list,fmt="o",label=f"{ilabel}")
+
+
+        # nx_means,nx_stds,ny_means,ny_stds,nz_means,nz_stds,g_means,g_stds,gxy_means,gxy_stds,azimuth_means,azimuth_stds, zenith_means,zenith_stds = get_means(this_df)
+        # ax.errorbar(rotations_list,gxy_means,yerr=gxy_stds,fmt="o",label=f"{isetting}")
+    # ax.errorbar(rotations,gxy_means,yerr=gxy_stds,fmt="o",label="azimuth")
+    # ax.errorbar(rotations,B,yerr=g_stds,fmt="o",label="B")
+    for ax in [ax1,ax2,ax3]:
+        ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
+        ax.set_xlabel(r" rotation [$^{\circ}$]", fontsize=22)        
+        ax.grid(True,alpha=0.6)
+        ax.set_xticks(np.linspace(0,360,9))
+        # ax.set_yticks(np.linspace(0,360,9))
+        # ax.set_aspect('equal')
+        ax.legend(ncols=5)
+    ax1.set_ylabel(r" g [ms$^{-2}$]", fontsize=22)
+    ax1.set_ylim(9.7,9.915)
+    ax2.set_ylabel(r" $\theta$ [$^{\circ}$]", fontsize=22)
+    ax3.set_ylabel(r" $\phi$ [$^{\circ}$]", fontsize=22)
+    ax3.set_yticks(np.linspace(0,360,5))
+    # ax1.set_ylim(-1.5,1.5)
+    # ax2.set_ylim(-1.5,1.5)
+    # ax3.set_ylim(8,11)
+    # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_gthetaphi{MB}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_gthetaphi{MB}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+plot_accelerometer_rθφ(accelerometer_sphe_dict_mDOMMB,MB="mDOMMB")
+plot_accelerometer_rθφ(accelerometer_sphe_dict_mMB,MB="mMB")
+
+def plot_magnetometer_xyz(magnetometer_cart_dict,MB):
+    fig = plt.figure(figsize=(8,5*3))
+    gs = gridspec.GridSpec(nrows=3,ncols=1, figure=fig)
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[1,0])
+    ax3 = fig.add_subplot(gs[2,0])
+    # ax.errorbar(rotations,zenith,yerr=zenith_stds,fmt="o",label="zenith")
+    # print(len(rotations_list),len(azimuth),azimuth)
+    for ilabel,isetting in zip(["no tilt","tab A","tab B","tab C","tab D"],[plane, A_tilts, B_tilts,C_tilts,D_tilts]):
+        angles = []
+        bx_list = []
+        bx_err_list = []
+        by_list = []
+        by_err_list = []
+        bz_list = []
+        bz_err_list = []
+        for iangle in isetting:
+            bx,bx_err,by,by_err,bz,bz_err = magnetometer_cart_dict[iangle]
+            bx_list.append(bx*10**(6)) #scaling T --> muT
+            bx_err_list.append(bx_err*10**(6))
+            by_list.append(by*10**(6))
+            by_err_list.append(by_err*10**(6))
+            bz_list.append(bz*10**(6))
+            bz_err_list.append(bz_err*10**(6))
+        ax1.errorbar(plane_int,bx_list,yerr=bx_err_list,fmt="o",label=f"{ilabel}")
+        ax2.errorbar(plane_int,by_list,yerr=by_err_list,fmt="o",label=f"{ilabel}")
+        ax3.errorbar(plane_int,bz_list,yerr=bz_err_list,fmt="o",label=f"{ilabel}")
+
+
+        # nx_means,nx_stds,ny_means,ny_stds,nz_means,nz_stds,g_means,g_stds,gxy_means,gxy_stds,azimuth_means,azimuth_stds, zenith_means,zenith_stds = get_means(this_df)
+        # ax.errorbar(rotations_list,gxy_means,yerr=gxy_stds,fmt="o",label=f"{isetting}")
+    # ax.errorbar(rotations,gxy_means,yerr=gxy_stds,fmt="o",label="azimuth")
+    # ax.errorbar(rotations,B,yerr=g_stds,fmt="o",label="B")
+    for ax in [ax1,ax2,ax3]:
+        ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
+        ax.set_xlabel(r" rotation [$^{\circ}$]", fontsize=22)
+        
+        ax.grid(True,alpha=0.6)
+        ax.set_xticks(np.linspace(0,360,9))
+        # ax.set_yticks(np.linspace(0,360,9))
+        # ax.set_aspect('equal')
+        ax.legend(ncols=5)
+    ax1.set_ylabel(r" B$_x$ [$\mu$T]", fontsize=22)
+    ax2.set_ylabel(r" B$_y$ [$\mu$T]", fontsize=22)
+    ax3.set_ylabel(r" B$_z$ [$\mu$T]", fontsize=22)
+    # ax1.set_ylim(-1.5,1.5)
+    # ax2.set_ylim(-1.5,1.5)
+    # ax3.set_ylim(8,11)
+    # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_bxbybz{MB}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_bxbybz{MB}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+plot_magnetometer_xyz(magnetometer_cart_dict_mDOMMB,MB="mDOMMB")
+plot_magnetometer_xyz(magnetometer_cart_dict_mMB,MB="mMB")
+
+
+def plot_magnetometer_rθφ(magnetometer_sphe_dict,MB):
+    fig = plt.figure(figsize=(8,5*3))
+    gs = gridspec.GridSpec(nrows=3,ncols=1, figure=fig)
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[1,0])
+    ax3 = fig.add_subplot(gs[2,0])
+    # ax.errorbar(rotations,zenith,yerr=zenith_stds,fmt="o",label="zenith")
+    # print(len(rotations_list),len(azimuth),azimuth)
+    for ilabel,isetting in zip(["no tilt","tab A","tab B","tab C","tab D"],[plane, A_tilts, B_tilts,C_tilts,D_tilts]):
+        angles = []
+        b_list = []
+        b_err_list = []
+        theta_list = []
+        theta_err_list = []
+        phi_list = []
+        phi_err_list = []
+        for iangle in isetting:
+            b,b_err,theta,theta_err,phi,phi_err = magnetometer_sphe_dict[iangle]
+            b_list.append(b*10**(6))
+            b_err_list.append(b_err*10**(6))
+            theta_list.append(np.rad2deg(theta))
+            theta_err_list.append(np.rad2deg(theta_err))
+            phi_list.append(np.rad2deg(phi))
+            phi_err_list.append(np.rad2deg(phi_err))
+        ax1.errorbar(plane_int,b_list,yerr=b_err_list,fmt="o",label=f"{ilabel}")
+        
+        ax2.errorbar(plane_int,theta_list,yerr=theta_err_list,fmt="o",label=f"{ilabel}")
+        ax3.errorbar(plane_int,phi_list,yerr=phi_err_list,fmt="o",label=f"{ilabel}")
+
+
+        # nx_means,nx_stds,ny_means,ny_stds,nz_means,nz_stds,g_means,g_stds,gxy_means,gxy_stds,azimuth_means,azimuth_stds, zenith_means,zenith_stds = get_means(this_df)
+        # ax.errorbar(rotations_list,gxy_means,yerr=gxy_stds,fmt="o",label=f"{isetting}")
+    # ax.errorbar(rotations,gxy_means,yerr=gxy_stds,fmt="o",label="azimuth")
+    # ax.errorbar(rotations,B,yerr=g_stds,fmt="o",label="B")
+    ax1.axhline(B_gallallee,0,1,ls="--",lw=2.5,label=f"B$_{{geo}}$ ({B_gallallee:.1f} ${{\mu}}$T)",alpha=1.0)
+    for ax in [ax1,ax2,ax3]:
+        ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
+        ax.set_xlabel(r" rotation [$^{\circ}$]", fontsize=22)        
+        ax.grid(True,alpha=0.6)
+        # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
+        # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
+        # ax.set_xlim(0,360)
+        ax.set_xticks(np.linspace(0,360,9))
+        # ax.set_yticks(np.linspace(0,360,9))
+        # ax.set_aspect('equal')
+        ax.legend(ncols=5)
+    
+    ax1.set_ylabel(r" B [$\mu$T]", fontsize=22)
+    ax2.set_ylabel(r" $\theta$ [$^{\circ}$]", fontsize=22)
+    ax3.set_ylabel(r" $\phi$ [$^{\circ}$]", fontsize=22)
+    ax1.set_ylim(35,130)
+    ax3.set_yticks(np.linspace(0,360,5))
+    # ax2.set_ylim(-1.5,1.5)
+    # ax3.set_ylim(8,11)
+    # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_bthetaphi{MB}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/magnetometerAccelerometerTilt_bthetaphi{MB}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+plot_magnetometer_rθφ(magnetometer_sphe_dict_mDOMMB,MB="mDOMMB")
+plot_magnetometer_rθφ(magnetometer_sphe_dict_mMB,MB="mMB")
+
+
+
+
+
+
+
+
+
+
+
+
+
 # df = pd.read_excel(accelerometer_readings,sheet_name='accelerometer_05132025MiniMBDup',header=0,usecols="A:AK")#Aup arrow tab up by 44+-1 mm
 # df_tilts = pd.read_excel(accelerometer_readings,header=0,usecols="R:V")
-rotations = df.columns.values
+# rotations = df.columns.values
 # tilts = df_tilts.columns.values
 # print(df.columns.values)
 
@@ -42,20 +437,7 @@ rotations = df.columns.values
 #     return [iname for iname in df.columns.values if name_string in iname]
 
 
-# def tilt_angle(nx,ny,nz):
-#     '''
-#     calculate tilt angle
-#     '''
-#     return np.arctan2(np.sqrt(nx*nx + ny*ny),nz)
 
-# def to_spherical(x,y,z):
-#     '''
-#     converts cartesian coordinates (x,y,z) to spherical (r,theta,phi)
-#     '''
-#     r = np.sqrt(x*x+y*y+z*z)
-#     theta = np.arctan2(np.sqrt(x*x + y*y),z)
-#     phi = np.arctan2(y,x)
-#     return r,theta,phi
 
 # def get_means(df):
 #     g_means = []
