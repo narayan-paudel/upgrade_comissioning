@@ -23,16 +23,10 @@ colorsCustom = ['#8dd3c7','#bebada','#80b1d3','#fdb462','#b3de69','#fb8072']
 
 # Eliminated the air gap between fiber optic and IDQ sensor window Work on data of June 19 2025, calculating delay between falling edge of trigger and rising edge of photodiode pulse
 data_folder = "/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/"
-data_folder_flasher = data_folder+"flasher_setup/June232025/"
+data_folder_flasher = data_folder+"flasher_setup/June242025/"
 which_chain = 1
-meas_files_00806 = sorted(glob.glob(data_folder_flasher+f"Flash{which_chain}FDC00806*"))
-meas_files_00840 = sorted(glob.glob(data_folder_flasher+f"Flash{which_chain}FDC00840*"))
-meas_files_00890 = sorted(glob.glob(data_folder_flasher+f"Flash{which_chain}FDC00890*"))
-meas_files_00963 = sorted(glob.glob(data_folder_flasher+f"Flash{which_chain}FDC00963*"))
-
-print(meas_files_00806)
-
-
+# meas_files = {"No filter, DAC = 60000":data_folder_flasher+"/Flash1FDC00890LED1WOFilterDAC60000.csv", "With filter, DAC = 60000":data_folder_flasher+"/Flash1FDC00890LED1WFilterDAC60000.csv", "With filter, DAC = 55000":data_folder_flasher+"/Flash1FDC00890LED1WFilterDAC55000.csv"}
+meas_files = {"With filter, DAC = 60000":data_folder_flasher+"/Flash1FDC00890LED1WFilterDAC60000.csv", "With filter, DAC = 55000":data_folder_flasher+"/Flash1FDC00890LED1WFilterDAC55000.csv"}
 
 import pandas as pd
 
@@ -47,31 +41,32 @@ def removeOutliers(x_list,low_lim,high_lim):
 
 
 def plot_MSP430ReadingHist(which_chain):
-    for FDC in [806,840,890,963][:]:
+    for FDC in [890][:]:
         fig = plt.figure(figsize=(8,5))
         gs = gridspec.GridSpec(nrows=1,ncols=1)
         ax = fig.add_subplot(gs[0])
-        bins=np.linspace(17,28,45)
-        print(bins)
+        bins=np.linspace(17,35,19)
+        # print(bins)
         # bins=np.linspace(0,220000,2201)
-        for n,flasher in enumerate([1,2,3,4,5]):
-            flasher_data = extractCSV(data_folder_flasher+f"Flash{which_chain}FDC00{FDC}LED{flasher}.csv")
-            ax.hist(flasher_data,bins=bins,histtype="step",linewidth=2.5,color=colorsCustom[n], label=f"LED {flasher}",alpha=1)
+        for n,isetting in enumerate(meas_files.keys()):
+            flasher_data = extractCSV(meas_files[isetting])
+            ax.hist(flasher_data,bins=bins,histtype="step",linewidth=2.5,color=colorsCustom[n], label=f"LED 1 {isetting}",alpha=1)
+            # ax.hist(flasher_data,histtype="step",linewidth=2.5,color=colorsCustom[n], label=f"LED 1 {isetting}",alpha=1)
             # ax.hist(flasher_data,histtype="step",linewidth=2.5, label=f"FDC{FDC}_{flasher}",alpha=0.8)
         ax.tick_params(axis='both',which='both', direction='in', labelsize=22)
         ax.set_ylabel(r"count", fontsize=22)
         # ax.set_xlabel(r"Start - Stop [ns]", fontsize=22)
         ax.set_xlabel(r"time delay [ns]", fontsize=22)
         ax.grid(True,alpha=0.6)
-        ax.set_ylim(0,130)
+        # ax.set_ylim(0,130)
         # ax.set_xlim(17,2)
-        ax.set_xticks([17,19,21,23,25,27])
+        # ax.set_xticks([17,19,21,23,25,27])
         # ax.set_ylim(285,310)
         # ax.set_yscale("log")
-        ax.legend(title=f"Daisy chain {FDC}",title_fontsize=13,fontsize=11,ncols=5)
+        ax.legend(title=f"Daisy chain {FDC}",title_fontsize=13,fontsize=11,ncols=1)
         # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
-        plt.savefig(plotFolder+f"/Flash{which_chain}FDC{FDC}FlasherDelayHist.png",transparent=False,bbox_inches='tight')
-        plt.savefig(plotFolder+f"/Flash{which_chain}FDC{FDC}FlasherDelayHist.pdf",transparent=False,bbox_inches='tight')
+        plt.savefig(plotFolder+f"/Flash{which_chain}FDC{FDC}FlasherDelayHistFilter.png",transparent=False,bbox_inches='tight')
+        plt.savefig(plotFolder+f"/Flash{which_chain}FDC{FDC}FlasherDelayHistFilter.pdf",transparent=False,bbox_inches='tight')
         plt.close()
 
 plot_MSP430ReadingHist(which_chain=1)
@@ -120,4 +115,4 @@ def plot_MSP430ReadingMeans(which_chain):
     plt.savefig(plotFolder+f"/Flasher{which_chain}DelayMeans.pdf",transparent=False,bbox_inches='tight')
     plt.close()
 
-plot_MSP430ReadingMeans(which_chain=1)
+# plot_MSP430ReadingMeans(which_chain=1)

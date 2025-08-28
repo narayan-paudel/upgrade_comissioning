@@ -11,6 +11,8 @@ import matplotlib.gridspec as gridspec
 from pathlib import Path
 home = str(Path.home())
 
+from utils import to_spherical, tilt_angle, get_means, get_sub_df, to_spherical_list, to_spherical_list_rotated,meas_from_df
+
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["mathtext.fontset"] = "dejavuserif"
 plt.rcParams.update({'font.size': 10})
@@ -20,6 +22,8 @@ plotFolder = home+"/research_ua/icecube/upgrade/upgrade_comissioning/plots/"
 
 colorsCustom = ['#8dd3c7','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69']
 B_gallallee = 48.1428 #muT
+inclination_gallallee = 90 + 61.5043 #degrees Down
+declination_gallallee = 90 - (-3.4068) #degrees -West (+ve would be east)
 
 
 drive = "/Users/epaudel/Library/CloudStorage/OneDrive-TheUniversityofAlabama/"
@@ -48,126 +52,10 @@ df_mMB = pd.read_csv(mMB_tilt_data,header=0,sep=" ")
 measured_angles = [f"{i}{j}" for i in range(0,361,10) for j in ["","A","B","C","D"]]
 print(measured_angles)
 # print(f"measured angles {measured_angles}")
-def get_sub_df(df,angle):
-    return df[df["angle"]==angle]
 
-def tilt_angle(nx,ny,nz):
-    '''
-    calculate tilt angle
-    '''
-    return np.arctan2(np.sqrt(nx*nx + ny*ny),nz)
-
-def to_spherical(x,y,z):
-    '''
-    converts cartesian coordinates (x,y,z) to spherical (r,theta,phi)
-    '''
-    r = np.sqrt(x*x+y*y+z*z)
-    theta = np.arctan2(np.sqrt(x*x + y*y),z)
-    phi = np.arctan2(y,x)
-    #####to ensure phi is positive
-    if phi < 0.0:
-        phi_pos = phi + 2*np.pi
-    else:
-        phi_pos = phi
-    return r,theta,phi_pos
-
-def to_spherical_rotated(x,y,z):
-    '''
-    case when sensor is rotated with x axis pointing up (z direction)
-    '''
-    return to_spherical(z,y,x)
-
-def to_spherical_list(x,y,z):
-    '''
-    converts list of cartesian coordinates (x,y,z) to spherical (r,theta,phi)
-    '''
-    r_list = []
-    theta_list = []
-    phi_list = []
-    for ix,iy,iz in zip(x,y,z):
-        r,theta,phi = to_spherical(ix,iy,iz)
-        r_list.append(r)
-        theta_list.append(theta)
-        phi_list.append(phi)
-    return r_list,theta_list,phi_list
-
-def to_spherical_list_rotated(x,y,z):
-    '''
-    when sensor is rotated with x axis pointing up
-    '''
-    return to_spherical_list(z,y,x)
-
-
-
-
-
-def get_mean(x,y,z):
-    # print(imagnetometer_readings)
-    ig_list = []
-    itheta_list = []
-    iphi_list = []
-    for index, irow in iaccelerometer_readings.iterrows():
-        # print(f"{index} {irow}")
-        ig,itheta,iphi = to_spherical(irow["gx"],irow["gy"],irow["gz"])
-        ig_list.append(ig)
-        itheta_list.append(itheta)
-        iphi_list.append(iphi)
-        # print(f"gravity {ig} m/s2 {np.rad2deg(itheta)} {np.rad2deg(iphi)}")
-    for ix in [ig_list,itheta_list,iphi_list]:
-        accelerometer_sphe_dict[f"{iangle}"].append(np.mean(ix))
-        accelerometer_sphe_dict[f"{iangle}"].append(np.std(ix))
-    # print(f"{iaccelerometer_readings["gx"].values}")
-    for jx in [iaccelerometer_readings["gx"].values,iaccelerometer_readings["gy"].values,iaccelerometer_readings["gz"].values]:
-        accelerometer_cart_dict[f"{iangle}"].append(np.mean(jx))
-        accelerometer_cart_dict[f"{iangle}"].append(np.std(jx))
-
-def meas_from_df(df,sensor_rotation):
-    print(df)
-    print(df["gx"])
-    magnetometer_cart_dict = {}
-    magnetometer_sphe_dict = {}
-    accelerometer_cart_dict = {}
-    accelerometer_sphe_dict = {}
-
-    for iangle in measured_angles:
-        accelerometer_cart_dict[f"{iangle}"] = []
-        accelerometer_sphe_dict[f"{iangle}"] = []
-        magnetometer_cart_dict[f"{iangle}"] = []
-        magnetometer_sphe_dict[f"{iangle}"] = []
-
-    for iangle in measured_angles[:]:
-        sub_df = get_sub_df(df,iangle)
-        # print(iangle)
-        # print(sub_df)
-        bx,by,bz = sub_df[["bx","by","bz"]].values.T
-        if not sensor_rotation:
-            b,theta_b,phi_b = to_spherical_list(bx,by,bz)
-        else:
-            b,theta_b,phi_b = to_spherical_list_rotated(bx,by,bz)
-        gx,gy,gz = sub_df[["gx","gy","gz"]].values.T
-        if not sensor_rotation:
-            g,theta_g,phi_g = to_spherical_list(gx,gy,gz)
-        else:
-            g,theta_g,phi_g = to_spherical_list_rotated(gx,gy,gz)
-        for ix in [b,theta_b,phi_b]:
-            magnetometer_sphe_dict[f"{iangle}"].append(np.mean(ix))
-            magnetometer_sphe_dict[f"{iangle}"].append(np.std(ix))
-        # print(f"{iaccelerometer_readings["gx"].values}")
-        for jx in [bx,by,bz]:
-            magnetometer_cart_dict[f"{iangle}"].append(np.mean(jx))
-            magnetometer_cart_dict[f"{iangle}"].append(np.std(jx))
-        for ix in [g,theta_g,phi_g]:
-            accelerometer_sphe_dict[f"{iangle}"].append(np.mean(ix))
-            accelerometer_sphe_dict[f"{iangle}"].append(np.std(ix))
-        # print(f"{iaccelerometer_readings["gx"].values}")
-        for jx in [gx,gy,gz]:
-            accelerometer_cart_dict[f"{iangle}"].append(np.mean(jx))
-            accelerometer_cart_dict[f"{iangle}"].append(np.std(jx))
-    return accelerometer_cart_dict,accelerometer_sphe_dict,magnetometer_cart_dict,magnetometer_sphe_dict
-
-accelerometer_cart_dict_mDOMMB,accelerometer_sphe_dict_mDOMMB,magnetometer_cart_dict_mDOMMB,magnetometer_sphe_dict_mDOMMB = meas_from_df(df_mDOMMB,sensor_rotation=False)
+accelerometer_cart_dict_mDOMMB,accelerometer_sphe_dict_mDOMMB,magnetometer_cart_dict_mDOMMB,magnetometer_sphe_dict_mDOMMB = meas_from_df(df_mDOMMB,measured_angles,sensor_rotation=False)
 # accelerometer_cart_dict_mMB,accelerometer_sphe_dict_mMB,magnetometer_cart_dict_mMB,magnetometer_sphe_dict_mMB = meas_from_df(df_mMB,sensor_rotation=True) #setup 1 May 16
-accelerometer_cart_dict_mMB,accelerometer_sphe_dict_mMB,magnetometer_cart_dict_mMB,magnetometer_sphe_dict_mMB = meas_from_df(df_mMB,sensor_rotation=False) #setup 2 May 29
+accelerometer_cart_dict_mMB,accelerometer_sphe_dict_mMB,magnetometer_cart_dict_mMB,magnetometer_sphe_dict_mMB = meas_from_df(df_mMB,measured_angles,sensor_rotation=False) #setup 2 May 29
 
 # plane = [f"{n}" for n in range(0,91,10)]
 plane = [f"{n}" for n in range(0,361,10)]
@@ -361,7 +249,7 @@ def plot_magnetometer_rθφ(magnetometer_sphe_dict,MB):
     ax3 = fig.add_subplot(gs[2,0])
     # ax.errorbar(rotations,zenith,yerr=zenith_stds,fmt="o",label="zenith")
     # print(len(rotations_list),len(azimuth),azimuth)
-    for ilabel,isetting in zip(["no tilt","tab A","tab B","tab C","tab D"],[plane, A_tilts, B_tilts,C_tilts,D_tilts]):
+    for ilabel,isetting in zip(["no tilt","tab A","tab B","tab C","tab D"][:1],[plane, A_tilts, B_tilts,C_tilts,D_tilts][:1]):
         angles = []
         b_list = []
         b_err_list = []
@@ -388,6 +276,8 @@ def plot_magnetometer_rθφ(magnetometer_sphe_dict,MB):
     # ax.errorbar(rotations,gxy_means,yerr=gxy_stds,fmt="o",label="azimuth")
     # ax.errorbar(rotations,B,yerr=g_stds,fmt="o",label="B")
     ax1.axhline(B_gallallee,0,1,ls="--",lw=2.5,label=f"B$_{{geo}}$ ({B_gallallee:.1f} ${{\mu}}$T)",alpha=1.0)
+    ax2.axhline(inclination_gallallee,0,1,ls="--",lw=2.5,label=f"$\delta$ ({inclination_gallallee:.1f}\u00b0)",alpha=1.0)
+    ax3.axhline(declination_gallallee,0,1,ls="--",lw=2.5,label=f"$I$ ({declination_gallallee:.1f}\u00b0)",alpha=1.0)
     for ax in [ax1,ax2,ax3]:
         ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
         ax.set_xlabel(r" rotation [$^{\circ}$]", fontsize=22)        
@@ -400,11 +290,15 @@ def plot_magnetometer_rθφ(magnetometer_sphe_dict,MB):
         # ax.set_aspect('equal')
         ax.legend(ncols=5)
     
+    ax2.set_yticks(np.linspace(0,360,37))
+    ax3.set_yticks(np.linspace(0,360,19))
     ax1.set_ylabel(r" B [$\mu$T]", fontsize=22)
     ax2.set_ylabel(r" $\theta$ [$^{\circ}$]", fontsize=22)
     ax3.set_ylabel(r" $\phi$ [$^{\circ}$]", fontsize=22)
-    ax1.set_ylim(35,130)
-    ax3.set_yticks(np.linspace(0,360,5))
+    # ax1.set_ylim(35,130)
+    ax1.set_ylim(0,130)
+    # ax3.set_yticks(np.linspace(0,360,5))
+    ax2.set_ylim(0,180)
     # ax2.set_ylim(-1.5,1.5)
     # ax3.set_ylim(8,11)
     # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
