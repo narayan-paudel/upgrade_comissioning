@@ -63,11 +63,12 @@ def start_run():
     # with open(f"../data/sensor_data/sensorsmDOMMB_{timestr}YNorth_test.txt","w") as text_file:
     # with open(f"../data/sensor_data/sensorsmDOMMB_{timestr}YNorth_test_RooftopAwayFromTelescope.txt","w") as text_file:
     # with open(f"../data/sensor_data/sensorsmDOMMB_{timestr}YNorth_test_table_Lab117.txt","w") as text_file:
-    with open(f"../data/sensor_data/sensorsmDOMMB_{timestr}YNorth_test_table_Lab117Scan.txt","w") as text_file:
+    # with open(f"../data/sensor_data/sensorsmDOMMB_{timestr}YNorth_test_table_Lab117Scan.txt","w") as text_file:
+    with open(f"../data/sensor_data/sensorsmDOMMB_{timestr}XNorth_Lab117Scan.txt","w") as text_file:
         text_file.writelines(f"{'gx'} {'gy'} {'gz'} {'bx'} {'by'} {'bz'}\n")
         for i in range(0,37):
             print(f"angle {i*10}")
-            for j in range(0,10):
+            for j in range(0,5):
                 # time.sleep(0.5)
                 try:
                     bx,by,bz = session.readMagnetometerXYZ() #tesla
@@ -85,6 +86,6 @@ def start_run():
                     gx,gy,gz = [np.nan,np.nan,np.nan]
                 # print(f"{i} accelerometer readings {gx} {gy} {gz}")
                 text_file.writelines(f"{gx} {gy} {gz} {bx} {by} {bz}\n")
-            time.sleep(10) #change rotation
+            # time.sleep(10) #change rotation
 
 start_run()

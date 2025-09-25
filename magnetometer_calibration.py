@@ -47,6 +47,10 @@ df_mDOM_117_pos2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgra
 df_mDOM_117_pos3 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250825YNorth_test_table_Lab117Pos3.txt",header=0,sep=" ")
 df_mDOM_117_floor = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250825YNorth_test_table_Lab117Floor.txt",header=0,sep=" ")
 
+#measurement taken on Sep 8 2025
+df_mDOM_rooftop_2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250908XNorth_rooftop_near_telescope.txt",header=0,sep=" ")
+df_mDOM_rooftop_away_2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250908XNorth_rooftop_away_from_telescope.txt",header=0,sep=" ")
+df_mDOM_117_2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250908XNorth_Lab117.txt",header=0,sep=" ")
 
 
 
@@ -59,6 +63,8 @@ def get_mean_B(df):
     '''
     bx,by,bz = df[["bx","by","bz"]].values.T
     r,theta,phi = to_spherical_list(bx,by,bz)
+    if np.rad2deg(np.mean(phi))<0:
+        print(f"negative  phi detected {np.rad2deg(np.mean(phi))}")
     return np.mean(bx)*10**6,np.std(bx)*10**6,np.mean(by)*10**6,np.std(by)*10**6,np.mean(bz)*10**6,np.std(bz)*10**6,\
         np.mean(r)*10**6,np.std(r)*10**6,np.rad2deg(np.mean(theta)),np.rad2deg(np.std(theta)),np.rad2deg(np.mean(phi)),np.rad2deg(np.std(phi))
 
@@ -163,6 +169,7 @@ def plot_xy_360(df_list,df_labels,MB):
     gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
     ax = fig.add_subplot(gs[0,0])
     # for df,dir in zip(df_list,dir_list):
+    ncolor = 0
     for df,df_label in zip(df_list,df_labels):
         angles_list = []
         r_list = []
@@ -192,12 +199,24 @@ def plot_xy_360(df_list,df_labels,MB):
             theta_std_list.append(theta_std)
             phi_list.append(phi)
             phi_std_list.append(phi_std)
-        ax.plot(bx_list,by_list,"-o",label=f"{df_label}",alpha=0.5)
+        bx_list_new = []
+        by_list_new = []
+        angles_list_new = []
+        for ibx,iby,iangle in zip(bx_list,by_list,angles_list):
+            if not np.isnan(ibx) and not np.isnan(iby):
+                bx_list_new.append(ibx)
+                by_list_new.append(iby)
+                angles_list_new.append(iangle)
+        bx_list = bx_list_new
+        by_list = by_list_new
+        angles_list = angles_list_new
+        ax.plot(bx_list,by_list,"-o",c=colorsCustom[ncolor],label=f"{df_label}",alpha=1)
         bx_calibrated, by_calibrated = corrected_ellipse(bx_list, by_list)
         print(f"means bx {np.mean(bx_list)} {np.mean(bx_calibrated)}")
         print(f"means by {np.mean(by_list)} {np.mean(by_calibrated)}")
-        ax.plot(bx_calibrated, by_calibrated, "-o", label=f"{df_label} (calibrated)", alpha=0.5)
-    ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
+        ax.plot(bx_calibrated, by_calibrated, "--o",c=colorsCustom[ncolor+2], label=f"{df_label} (calibrated)", alpha=1)
+        ncolor+=1
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
     ax.grid(True,alpha=0.6)
     # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
     # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
@@ -205,10 +224,10 @@ def plot_xy_360(df_list,df_labels,MB):
     # ax.set_xticks(np.linspace(0,360,9))
     # ax.set_yticks(np.linspace(0,360,9))
     ax.set_aspect('equal')
-    ax.legend(ncols=2,fontsize=8)
+    ax.legend(loc="lower left",ncols=1,fontsize=16)
     # ax.set_yticks(np.linspace(0,360,37))
-    ax.set_xlabel(r" x [$\mu$T]", fontsize=16)
-    ax.set_ylabel(r" y [$\mu$T]", fontsize=16)
+    ax.set_xlabel(r" $B_x$ [$\mu$T]", fontsize=20)
+    ax.set_ylabel(r" $B_y$ [$\mu$T]", fontsize=20)
     # ax1.set_ylim(35,130)
     # ax.set_ylim(-55,55)
     # ax.set_xlim(-55,55)
@@ -224,17 +243,20 @@ def plot_xy_360(df_list,df_labels,MB):
 # plot_orientation_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope",],MB="mDOM")
 # plot_orientation_360([df_mDOM_317,df_mMB_317],["mDOM MB 317", "mMB 317"],MB="mDOM_room")
 # plot_xy_360([df_mDOM_117],["mDOM MB 117"],MB="mDOM_mb_117")
-plot_xy_360([df_mDOM_117,df_mDOM_117_repeat,df_mDOM_117_pos2,df_mDOM_117_pos3,df_mDOM_117_floor],["mDOM MB 117","mDOM MB 117 Repeat","mDOM MB 117 Pos2","mDOM MB 117 Pos3","mDOM MB 117 Floor"],MB="mDOM_lab")
+# plot_xy_360([df_mDOM_117,df_mDOM_117_repeat,df_mDOM_117_pos2,df_mDOM_117_pos3,df_mDOM_117_floor],["mDOM MB 117","mDOM MB 117 Repeat","mDOM MB 117 Pos2","mDOM MB 117 Pos3","mDOM MB 117 Floor"],MB="mDOM_lab")
 # plot_xy_360([df_mDOM_117],["mDOM MB 117"],MB="mDOM_mb_117")
-# plot_orientation_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away,df_mMB_rooftop],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope","rooftop_near_telescope_mMB"],MB="mDOM")
+# plot_xy_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away,df_mMB_rooftop],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope","rooftop_near_telescope_mMB"],MB="mDOM_rooftop")
+# plot_xy_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope","rooftop_away_telescope"],MB="mDOM_rooftop_sep8")
+# plot_xy_360([df_mDOM_rooftop_away],["rooftop_away_telescope",],MB="mDOM_rooftop")
 
 
 
-def plot_corrected_heading_360(df_list,df_labels,MB):
-    fig = plt.figure(figsize=(8,5))
+def plot_corrected_heading_360(df_list,df_labels,MB,roll):
+    fig = plt.figure(figsize=(8,8))
     gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
     ax = fig.add_subplot(gs[0,0])
     # for df,dir in zip(df_list,dir_list):
+    ncolor = 0
     for df,df_label in zip(df_list,df_labels):
         angles_list = []
         r_list = []
@@ -265,30 +287,79 @@ def plot_corrected_heading_360(df_list,df_labels,MB):
             phi_list.append(phi)
             phi_std_list.append(phi_std)
         # ax.plot(bx_list,by_list,"-o",label=f"{df_label}",alpha=0.5)
+        bx_list_new = []
+        by_list_new = []
+        angles_list_new = []
+        for ibx,iby,iangle in zip(bx_list,by_list,angles_list):
+            if not np.isnan(ibx) and not np.isnan(iby):
+                bx_list_new.append(ibx)
+                by_list_new.append(iby)
+                angles_list_new.append(iangle)
+        bx_list = bx_list_new
+        by_list = by_list_new
+        angles_list = angles_list_new
+
         bx_calibrated, by_calibrated = corrected_ellipse(bx_list, by_list)
         headings_original = [np.rad2deg(np.arctan2(by, bx)) for bx, by in zip(bx_list, by_list)]
-        headings_original = [i+360 if i<0 else i for i in headings_original]
+        print(f"headings original: {headings_original}")
+        headings_original = [i+360 if i<-1.0 else i for i in headings_original]
+        print(f"headings original: {headings_original}")
         headings_corrected = [np.rad2deg(np.arctan2(byc, bxc)) for bxc,byc in zip(bx_calibrated, by_calibrated)]
-        headings_corrected = [i+360 if i<0 else i for i in headings_corrected]
+        print(f"headings corrected: {headings_corrected}")
+        headings_corrected = [i+360 if i<-1.0 else i for i in headings_corrected]
+        # headings_corrected = [i+360 if 0<i<42 else i for i in headings_corrected]
+        headings_corrected = [i+360 if 0<i<34.0 else i for i in headings_corrected]
+        # print(f"headings original: {headings_original}")
+        print(f"headings corrected: {headings_corrected}")
         print(f"means bx {np.mean(bx_list)} {np.mean(bx_calibrated)}")
         print(f"means by {np.mean(by_list)} {np.mean(by_calibrated)}")
         # ax.plot(bx_calibrated, by_calibrated, "-o", label=f"{df_label} (calibrated)", alpha=0.5)
-        ax.plot(angles, headings_original, "-o", label=f"{df_label} (original)", alpha=0.5)
-        ax.plot(angles, headings_corrected, "-o", label=f"{df_label} (calibrated)", alpha=0.5)
-    ax.tick_params(axis='both',which='both', direction='in', labelsize=16)
+        # roll = True
+        # if roll:
+        #     angles_list = np.roll(angles_list, shift=11)
+        #     headings_corrected = np.roll(headings_corrected, shift=11)
+        #     headings_original = np.roll(headings_original, shift=11)
+        #     if df_label == "mDOM MB 117":
+        #         angles_list = [- (360 - i) if i >= 270 else i for i in angles_list]
+        #     elif df_label in ["rooftop_away_telescope"]:
+        #         angles_list = [- (360 - i) if i >= 290 else i for i in angles_list]
+        #     elif df_label in ["rooftop_near_telescope_pos2"]:
+        #         angles_list = [- (360 - i) if i >= 210 else i for i in angles_list]
+        #     elif df_label in ["rooftop_near_telescope"]:
+        #         angles_list = [- (360 - i) if i >= 220 else i for i in angles_list]
+        #     elif df_label in ["rooftop_near_telescope_run2"]:
+        #         angles_list = [- (360 - i) if i >= 330 else i for i in angles_list]
+        #     elif df_label in ["rooftop_away_telescope_run2"]:
+        #         angles_list = [- (360 - i) if i >= 330 else i for i in angles_list]
+        #     else:
+        #         angles_list = [- (360 - i) if i >= 260 else i for i in angles_list]
+        # else:
+        #     ax.plot(angles_list, headings_original, "-o", c=colorsCustom[ncolor], label=f"{df_label} (original)", alpha=1)
+        ax.plot(angles_list, headings_original, "-o", c=colorsCustom[ncolor], label=f"{df_label}", alpha=1)
+        ax.plot(angles_list, headings_corrected, "--o", c=colorsCustom[ncolor+2], label=f"{df_label} (calibrated)", alpha=1)
+        ncolor += 1
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
     ax.grid(True,alpha=0.6)
     # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
     # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
     # ax.set_xlim(0,360)
-    # ax.set_xticks(np.linspace(0,360,9))
+    ###############################################
+    ##############################################
+    # ax.set_xticks(np.linspace(0,360,9)-roll)
     # ax.set_yticks(np.linspace(0,360,9))
-    # ax.set_aspect('equal')
-    ax.legend(ncols=2,fontsize=8)
+    ax.set_xticks(np.linspace(0,360,9))
+    # ax.set_yticks(np.linspace(0,360,9))
+    ax.set_yticks(np.linspace(0,405,10))
+    # ax.set_yticks(np.linspace(-180,180,9))
+    #############################################
+    #############################################
+    ax.set_aspect('equal')
+    ax.legend(ncols=1,fontsize=16)
     # ax.set_yticks(np.linspace(0,360,37))
-    ax.set_xlabel(r" x [$\mu$T]", fontsize=16)
-    ax.set_ylabel(r" y [$\mu$T]", fontsize=16)
-    plt.savefig(plotFolder+f"/orientation_with_B_rooftop_{MB}xy_heading.png",transparent=False,bbox_inches='tight')
-    plt.savefig(plotFolder+f"/orientation_with_B_rooftop_{MB}xy_heading.pdf",transparent=False,bbox_inches='tight')
+    ax.set_xlabel(r" mDOM rotation [$^{\circ}$]", fontsize=20)
+    ax.set_ylabel(r" $\phi$ [$^{\circ}$]", fontsize=20)
+    plt.savefig(plotFolder+f"/orientation_with_B_rooftop_{MB}xy_heading_roll{roll}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/orientation_with_B_rooftop_{MB}xy_heading_roll{roll}.pdf",transparent=False,bbox_inches='tight')
     plt.close()
 
 # plot_orientation_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope",],MB="mDOM")
@@ -296,8 +367,15 @@ def plot_corrected_heading_360(df_list,df_labels,MB):
 # plot_xy_360([df_mDOM_117],["mDOM MB 117"],MB="mDOM_mb_117")
 # plot_corrected_heading_360([df_mDOM_117_pos2],["mDOM MB 117 Pos2"],MB="mDOM_lab_117_pos2")
 # plot_corrected_heading_360([df_mDOM_117,df_mDOM_117_repeat,df_mDOM_117_pos2,df_mDOM_117_pos3,df_mDOM_117_floor],["mDOM MB 117","mDOM MB 117 Repeat","mDOM MB 117 Pos2","mDOM MB 117 Pos3","mDOM MB 117 Floor"],MB="mDOM_lab")
-plot_corrected_heading_360([df_mDOM_117,df_mDOM_117_pos2,df_mDOM_117_pos3],["mDOM MB 117","mDOM MB 117 Pos2","mDOM MB 117 Pos3"],MB="mDOM_lab")
+# plot_corrected_heading_360([df_mDOM_117,df_mDOM_117_pos2,df_mDOM_117_pos3],["mDOM MB 117","mDOM MB 117 Pos2","mDOM MB 117 Pos3"],MB="mDOM_lab")
 # plot_corrected_heading_360([df_mDOM_117_floor],["mDOM MB 117 Floor"],MB="mDOM_lab")
 # plot_corrected_heading_360([df_mDOM_117,df_mDOM_117_repeat,df_mDOM_117_floor],["mDOM MB 117","mDOM MB 117 Repeat","mDOM MB 117 Floor"],MB="mDOM_lab")
 # plot_xy_360([df_mDOM_117],["mDOM MB 117"],MB="mDOM_mb_117")
-# plot_orientation_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away,df_mMB_rooftop],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope","rooftop_near_telescope_mMB"],MB="mDOM")
+# plot_corrected_heading_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope",],MB="mDOM_rooftop")
+###################################################################################################################################################################
+#############################latest measurement####################################################################################################################
+# plot_corrected_heading_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope_run2","rooftop_away_telescope_run2"],MB="mDOM_rooftop_sep8",roll=True)
+# plot_corrected_heading_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope_run2","rooftop_away_telescope_run2"],MB="mDOM_rooftop_sep8",roll=False)
+plot_xy_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8")
+plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=45)    
+plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=0)
