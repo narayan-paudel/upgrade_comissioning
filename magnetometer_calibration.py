@@ -52,7 +52,9 @@ df_mDOM_rooftop_2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgr
 df_mDOM_rooftop_away_2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250908XNorth_rooftop_away_from_telescope.txt",header=0,sep=" ")
 df_mDOM_117_2 = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/sensor_data/sensorsmDOMMB_20250908XNorth_Lab117.txt",header=0,sep=" ")
 
-
+#measurement at mDOM at Utah on Oct 09 2025, PMT 8/16 facing North (the water tank), rotating anticlockwise when looking from top
+df_mDOM_Utah = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/utah/mDOM_North_UtahScan_PMT8_16North.txt",header=0,sep=" ")
+# df_mDOM_Utah = pd.read_csv("/Users/epaudel/research_ua/icecube/upgrade/upgrade_comissioning/data/utah/mDOM_North_UtahScan.txt",header=0,sep=" ")
 
 
 # print(df_mDOMMB_yNorth.head())
@@ -248,6 +250,96 @@ def plot_xy_360(df_list,df_labels,MB):
 # plot_xy_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away,df_mMB_rooftop],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope","rooftop_near_telescope_mMB"],MB="mDOM_rooftop")
 # plot_xy_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope","rooftop_away_telescope"],MB="mDOM_rooftop_sep8")
 # plot_xy_360([df_mDOM_rooftop_away],["rooftop_away_telescope",],MB="mDOM_rooftop")
+plot_xy_360([df_mDOM_Utah],["utah",],MB="mDOM_utah")
+
+
+def plot_xyz_360(df_list,df_labels,MB):
+    fig = plt.figure(figsize=(8,8))
+    gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
+    ax = fig.add_subplot(gs[0,0],projection='3d')
+    # for df,dir in zip(df_list,dir_list):
+    ncolor = 0
+    for df,df_label in zip(df_list,df_labels):
+        angles_list = []
+        r_list = []
+        r_std_list = []
+        theta_list = []
+        theta_std_list = []
+        phi_list = []
+        phi_std_list = []
+        bx_list = []
+        bx_std_list = []
+        by_list = []
+        by_std_list = []
+        bz_list = []
+        bz_std_list = []
+        for iangle in angles:
+            bx,bx_std,by,by_std,bz,bz_std,r,r_std,theta,theta_std,phi,phi_std = get_mean_B_rolling(df,iangle)
+            angles_list.append(iangle)
+            bx_list.append(bx)
+            bx_std_list.append(bx_std)
+            by_list.append(by)
+            by_std_list.append(by_std)
+            bz_list.append(bz)
+            bz_std_list.append(bz_std)
+            r_list.append(r)
+            r_std_list.append(r_std)
+            theta_list.append(theta)
+            theta_std_list.append(theta_std)
+            phi_list.append(phi)
+            phi_std_list.append(phi_std)
+        bx_list_new = []
+        by_list_new = []
+        angles_list_new = []
+        for ibx,iby,iangle in zip(bx_list,by_list,angles_list):
+            if not np.isnan(ibx) and not np.isnan(iby):
+                bx_list_new.append(ibx)
+                by_list_new.append(iby)
+                angles_list_new.append(iangle)
+        bx_list = bx_list_new
+        by_list = by_list_new
+        angles_list = angles_list_new
+        ax.plot3D(bx_list,by_list,bz_list,"-o",c=colorsCustom[ncolor],label=f"{df_label}",alpha=1)
+        # bx_calibrated, by_calibrated = corrected_ellipse(bx_list, by_list)
+        # ax.scatter3D(bx_calibrated, by_calibrated,bz_calibrated, "--o",c=colorsCustom[ncolor+2], label=f"{df_label} (calibrated)", alpha=1)
+        ncolor+=1
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
+    ax.grid(True,alpha=0.6)
+    # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
+    # ax.set_xticks([str(int(i)) for i in np.linspace(0,360,9)])
+    # ax.set_xlim(0,360)
+    # ax.set_xticks(np.linspace(0,360,9))
+    # ax.set_yticks(np.linspace(0,360,9))
+    # ax.set_aspect('equal')
+    ax.legend(loc="lower left",ncols=1,fontsize=16)
+    # ax.set_yticks(np.linspace(0,360,37))
+    ax.set_xlabel(r" $B_x$ [$\mu$T]", fontsize=20)
+    ax.set_ylabel(r" $B_y$ [$\mu$T]", fontsize=20)
+    ax.set_zlabel(r" $B_z$ [$\mu$T]", fontsize=20)
+    # ax1.set_ylim(35,130)
+    # ax.set_ylim(-55,55)
+    # ax.set_zlim(-60,0)
+    # ax3.set_yticks(np.linspace(0,360,5))
+    # ax.set_ylim(0,180)
+    # ax2.set_ylim(-1.5,1.5)
+    # ax3.set_ylim(8,11)
+    # ax.legend(["B$_{x}$","B$_{y}$","B$_{z}$","B"],fontsize=14,ncols=4,bbox_to_anchor=(0.90, 0.95),loc="right")
+    plt.savefig(plotFolder+f"/orientation_with_B_rooftop_{MB}xyz.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/orientation_with_B_rooftop_{MB}xyz.pdf",transparent=False,bbox_inches='tight')
+    # plt.close()
+    plt.show()
+
+
+plot_xyz_360([df_mDOM_Utah],["utah",],MB="mDOM_utah")
+plot_xyz_360([df_mDOM_117_2],["mDOM_117_2"],MB="mDOM_117")
+
+
+
+
+
+
+
+
 
 
 
@@ -376,6 +468,7 @@ def plot_corrected_heading_360(df_list,df_labels,MB,roll):
 #############################latest measurement####################################################################################################################
 # plot_corrected_heading_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope_run2","rooftop_away_telescope_run2"],MB="mDOM_rooftop_sep8",roll=True)
 # plot_corrected_heading_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope_run2","rooftop_away_telescope_run2"],MB="mDOM_rooftop_sep8",roll=False)
-plot_xy_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8")
-plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=45)    
-plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=0)
+# plot_xy_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8")
+# plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=45)    
+# plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=0)
+plot_corrected_heading_360([df_mDOM_Utah],["mDOM_utah"],MB="mDOM_utah",roll=0)
