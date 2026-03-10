@@ -70,8 +70,7 @@ def get_mean_B(df):
     return np.mean(bx)*10**6,np.std(bx)*10**6,np.mean(by)*10**6,np.std(by)*10**6,np.mean(bz)*10**6,np.std(bz)*10**6,\
         np.mean(r)*10**6,np.std(r)*10**6,np.rad2deg(np.mean(theta)),np.rad2deg(np.std(theta)),np.rad2deg(np.mean(phi)),np.rad2deg(np.std(phi))
 
-
-def get_mean_B_rolling(df,angle):
+def get_mean_B_rolling_muT(df,angle):
     '''
     returns field in muT and degrees
     '''
@@ -81,6 +80,20 @@ def get_mean_B_rolling(df,angle):
     r,theta,phi = to_spherical_list(bx,by,bz)
     return np.mean(bx)*10**6,np.std(bx)*10**6,np.mean(by)*10**6,np.std(by)*10**6,np.mean(bz)*10**6,np.std(bz)*10**6,\
         np.mean(r)*10**6,np.std(r)*10**6,np.rad2deg(np.mean(theta)),np.rad2deg(np.std(theta)),np.rad2deg(np.mean(phi)),np.rad2deg(np.std(phi))
+
+
+
+
+def get_mean_B_rolling(df,angle):
+    '''
+    returns field in muT and degrees
+    '''
+    bx,by,bz = df[["bx","by","bz"]].values[angle:angle+10].T
+    # print(f"bx {bx} by {by} bz {bz}")
+    angle_list = []
+    r,theta,phi = to_spherical_list(bx,by,bz)
+    return np.mean(bx),np.std(bx),np.mean(by),np.std(by),np.mean(bz),np.std(bz),\
+        np.mean(r),np.std(r),np.rad2deg(np.mean(theta)),np.rad2deg(np.std(theta)),np.rad2deg(np.mean(phi)),np.rad2deg(np.std(phi))
 
 # get_mean_B_rolling(df_mDOM_rooftop,10)
 
@@ -250,7 +263,9 @@ def plot_xy_360(df_list,df_labels,MB):
 # plot_xy_360([df_mDOM_rooftop,df_mDOM_rooftop_pos2,df_mDOM_rooftop_away,df_mMB_rooftop],["rooftop_near_telescope","rooftop_near_telescope_pos2","rooftop_away_telescope","rooftop_near_telescope_mMB"],MB="mDOM_rooftop")
 # plot_xy_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope","rooftop_away_telescope"],MB="mDOM_rooftop_sep8")
 # plot_xy_360([df_mDOM_rooftop_away],["rooftop_away_telescope",],MB="mDOM_rooftop")
-plot_xy_360([df_mDOM_Utah],["utah",],MB="mDOM_utah")
+# plot_xy_360([df_mDOM_Utah],["utah",],MB="mDOM_utah")
+
+plot_xy_360([df_mDOM_117_2],["mDOM MB 117"],MB="mDOM_mb_117")
 
 
 def plot_xyz_360(df_list,df_labels,MB):
@@ -330,11 +345,11 @@ def plot_xyz_360(df_list,df_labels,MB):
     plt.show()
 
 
-plot_xyz_360([df_mDOM_Utah],["utah",],MB="mDOM_utah")
+# plot_xyz_360([df_mDOM_Utah],["utah",],MB="mDOM_utah")
 plot_xyz_360([df_mDOM_117_2],["mDOM_117_2"],MB="mDOM_117")
 
 
-
+mdom = "mDOM_MB_117"
 
 
 
@@ -470,5 +485,150 @@ def plot_corrected_heading_360(df_list,df_labels,MB,roll):
 # plot_corrected_heading_360([df_mDOM_rooftop_2,df_mDOM_rooftop_away_2],["rooftop_near_telescope_run2","rooftop_away_telescope_run2"],MB="mDOM_rooftop_sep8",roll=False)
 # plot_xy_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8")
 # plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=45)    
-# plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=0)
-plot_corrected_heading_360([df_mDOM_Utah],["mDOM_utah"],MB="mDOM_utah",roll=0)
+plot_corrected_heading_360([df_mDOM_117_2],["mDOM_MB_117"],MB="mDOM_117_sep8",roll=0)
+# plot_corrected_heading_360([df_mDOM_Utah],["mDOM_utah"],MB="mDOM_utah",roll=0)
+
+
+def get_mean_B_list(df_list,df_labels):
+    for df,df_label in zip(df_list,df_labels):
+        angles_list = []
+        r_list = []
+        r_std_list = []
+        theta_list = []
+        theta_std_list = []
+        phi_list = []
+        phi_std_list = []
+        bx_list = []
+        bx_std_list = []
+        by_list = []
+        by_std_list = []
+        bz_list = []
+        bz_std_list = []
+        for iangle in angles:
+            bx,bx_std,by,by_std,bz,bz_std,r,r_std,theta,theta_std,phi,phi_std = get_mean_B_rolling(df,iangle)
+            angles_list.append(iangle)
+            bx_list.append(bx)
+            bx_std_list.append(bx_std)
+            by_list.append(by)
+            by_std_list.append(by_std)
+            bz_list.append(bz)
+            bz_std_list.append(bz_std)
+            r_list.append(r)
+            r_std_list.append(r_std)
+            theta_list.append(theta)
+            theta_std_list.append(theta_std)
+            phi_list.append(phi)
+            phi_std_list.append(phi_std)
+        # ax.plot(bx_list,by_list,"-o",label=f"{df_label}",alpha=0.5)
+        bx_list_new = []
+        by_list_new = []
+        bz_list_new = []
+        angles_list_new = []
+        for ibx,iby,ibz,iangle in zip(bx_list,by_list,bz_list,angles_list):
+            if not np.isnan(ibx) and not np.isnan(iby) and not np.isnan(ibz):
+                bx_list_new.append(ibx)
+                by_list_new.append(iby)
+                bz_list_new.append(ibz)
+                angles_list_new.append(iangle)
+        bx_list = bx_list_new
+        by_list = by_list_new
+        bz_list = bz_list_new
+        angles_list = angles_list_new
+    return bx_list, by_list, bz_list, angles_list
+
+bx_mean_list, by_mean_list, bz_mean_list, angles_list = get_mean_B_list([df_mDOM_117_2],["mDOM_MB_117"])
+
+#at tuscaloosa
+B_horizontal = 23.0 #muT
+Bvert = 42.3 #muT
+B_total = 48.1 #muT
+
+
+
+def plot_B_calibrated(mag_x, mag_y, mag_z,label=""):
+    mag_x = np.array(mag_x)*10**6 #convert to microTesla
+    mag_y = np.array(mag_y)*10**6 #convert to microTesla
+    mag_z = np.array(mag_z)*10**6 #convert to microTesla
+    mag_x_cal, mag_y_cal = corrected_ellipse(mag_x, mag_y)
+    B = np.sqrt(mag_x**2 + mag_y**2 + mag_z**2)
+    B_cal = np.sqrt(np.array(mag_x_cal)**2 + np.array(mag_y_cal)**2 + mag_z**2)
+    fig = plt.figure(figsize=(8,5))
+    gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
+    ax = fig.add_subplot(gs[0,0])
+    ax.plot(angles_list,B, "-o", c="b", label=f"{'raw'}", alpha=1)
+    ax.plot(angles_list,B_cal, "-o", c="r", label=f"{'cal'}", alpha=1)
+    B_cal_noaa = np.sqrt(np.array(mag_x_cal)**2 + np.array(mag_y_cal)**2 + (np.ones_like(mag_z)*Bvert)**2)
+    # ax.plot(angles_list,B_cal_noaa, "-o", c="g", label=f"{'cal_noaa'}", alpha=1)
+    ax.hlines(B_total,0,360,ls="--",lw=2.5,label=f"B$_{{total}}$ ({B_total:.1f} ${{\u03bc}}$T)",alpha=1.0)
+    ax.set_xticks(np.linspace(0,360,9))
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
+    ax.grid(True,alpha=0.6)
+    ax.set_ylim(0,90)
+    # ax.set_aspect('equal')
+    ax.legend(loc="lower left",ncols=1,fontsize=16)
+    # ax.set_yticks(np.linspace(0,360,37))
+    ax.set_ylabel(r" $B$ [$\mu$T]", fontsize=20)
+    ax.set_xlabel(r" $\phi$ [$^{\circ}$]", fontsize=20)
+    plt.savefig(plotFolder+f"/orientation_with_{mdom}B_calibrated_{label}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/orientation_with_{mdom}B_calibrated_{label}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+plot_B_calibrated(bx_mean_list, by_mean_list, bz_mean_list,label="coarse")
+
+
+def plot_Bxy_calibrated(mag_x, mag_y, mag_z,label=""):
+    mag_x = np.array(mag_x)*10**6 #convert to microTesla
+    mag_y = np.array(mag_y)*10**6 #convert to microTesla
+    mag_z = np.array(mag_z)*10**6 #convert to microTesla
+    mag_x_cal, mag_y_cal = corrected_ellipse(mag_x, mag_y)
+    B = np.sqrt(mag_x**2 + mag_y**2)
+    B_cal = np.sqrt(np.array(mag_x_cal)**2 + np.array(mag_y_cal)**2)
+    print(f"B-Bcal range: {np.min(abs(B-B_cal)):.2f} to {np.max(abs(B-B_cal)):.2f} microTesla")
+    print(f"B-Bcal range: {[i for i in B-B_cal if i < 0]} microTesla")
+    fig = plt.figure(figsize=(8,5))
+    gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
+    ax = fig.add_subplot(gs[0,0])
+    ax.hlines(B_horizontal,0,360,ls="--",lw=2.5,label=f"B$_{{xy}}$ ({B_horizontal:.1f} ${{\u03bc}}$T)",alpha=1.0)
+    ax.plot(angles_list,B, "-o", c="b", label=f"{'raw'}", alpha=1)
+    ax.plot(angles_list,B_cal, "-o", c="r", label=f"{'cal'}", alpha=1)
+    ax.set_xticks(np.linspace(0,360,9))
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
+    ax.grid(True,alpha=0.6)
+    # ax.set_aspect('equal')
+    ax.set_ylim(0,90)
+    ax.legend(loc="upper right",ncols=1,fontsize=16)
+    # ax.set_yticks(np.linspace(0,360,37))
+    ax.set_ylabel(r" $B_{xy}$ [$\mu$T]", fontsize=20)
+    ax.set_xlabel(r" $\phi$ [$^{\circ}$]", fontsize=20)
+    plt.savefig(plotFolder+f"/orientation_with_{mdom}BxBy_calibrated_{label}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/orientation_with_{mdom}BxBy_calibrated_{label}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+plot_Bxy_calibrated(bx_mean_list, by_mean_list, bz_mean_list,label="coarse")
+
+
+
+
+def plot_Bz(mag_z,label=""):
+    mag_z = np.array(mag_z)*10**6 #convert to microTesla
+    fig = plt.figure(figsize=(8,5))
+    gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
+    ax = fig.add_subplot(gs[0,0])
+    ax.hlines(Bvert,0,360,ls="--",lw=2.5,label=f"B$_{{z}}$ ({Bvert:.1f} ${{\u03bc}}$T)",alpha=1.0)
+    ax.plot(angles_list,abs(mag_z), "-o", c="b", label=f"{'raw'}", alpha=1)
+    ax.set_xticks(np.linspace(0,360,9))
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
+    ax.grid(True,alpha=0.6)
+    print(f"mean field offset Bz value: {Bvert-np.mean(mag_z):.2f} microTesla")
+    print(f"range of Bz values: {np.min(Bvert-mag_z):.2f} to {np.max(Bvert-mag_z):.2f} microTesla")
+    # ax.set_aspect('equal')
+    ax.legend(loc="upper right",ncols=1,fontsize=16)
+    # ax.set_yticks(np.linspace(0,360,37))
+    ax.set_ylim(0,90)
+    ax.set_ylabel(r" $B_{z}$ [$\mu$T]", fontsize=20)
+    ax.set_xlabel(r" $\phi$ [$^{\circ}$]", fontsize=20)
+    plt.savefig(plotFolder+f"/orientation_with_{mdom}Bz_calibrated_{label}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/orientation_with_{mdom}Bz_calibrated_{label}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+plot_Bz(bz_mean_list,label="coarse")

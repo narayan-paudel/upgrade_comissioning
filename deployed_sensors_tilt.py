@@ -31,7 +31,7 @@ string_maps_map = {}
 for istring_map in string_maps_list:
     string_number = int(re.findall(r'-?\d*\.?\d+', istring_map.split("/")[-1].split("_")[1])[0])
     string_maps_map[string_number] = istring_map
-print(string_maps_map)
+# print(string_maps_map)
 ICU_sensor_measurements = "/Users/epaudel/Library/CloudStorage/OneDrive-TheUniversityofAlabama/research_notes/notes/sensor_measurements_at_ICU/"
 
 geometry_cmd = "/Users/epaudel/Library/CloudStorage/OneDrive-TheUniversityofAlabama/research_notes/notes/geometry/Upgrade_Strings_CMD-v103_final_final_final.xlsx"
@@ -218,25 +218,105 @@ for istring in string_maps_map.keys():
                 isensor.board_type_name = imap["board_type_name"]
                 isensor.icm_id = imap["icm_id"]
 
-def plot_tilt_angles(sensor_measurement_list):
+def hist_tilt_angles_g(sensor_measurement_list,bins=np.linspace(-1,90,92),plot_label="all_sensors"):
     fig = plt.figure(figsize=(8,5))
     gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
     ax = fig.add_subplot(gs[0,0])
+    print(f"hist bins {bins}")
     tilt_angles = []
     for isensor in sensor_measurement_list:
         tilt_angles.append(isensor.g_theta_mean)
-    bins = np.linspace(0,90,91)
     ax.hist(tilt_angles,bins=bins,histtype="step",lw=2.5,alpha=1)
+    mean_tilt = np.mean(tilt_angles)
+    std_tilt = np.std(tilt_angles)
+    ax.text(0.95,0.95,f"mean: {mean_tilt:.1f}\u00b0 \u00B1 {std_tilt:.1f}\u00b0",transform=ax.transAxes,ha="right",va="top",fontsize=16)
     ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
     ax.grid(True,alpha=0.6)
-    ax.set_ylabel(r" # of samples", fontsize=20)
-    ax.set_xlabel(f"tilt angle [deg]", fontsize=20)
-    plt.savefig(plotFolder+f"/tilt_angle_dist.png",transparent=False,bbox_inches='tight')
-    plt.savefig(plotFolder+f"/tilt_angle_dist.pdf",transparent=False,bbox_inches='tight')
+    ax.set_ylabel(r"count", fontsize=20)
+    ax.set_xlabel(f" tilt $\mathrm{{\\theta}}$\u00b0", fontsize=20)
+    plt.savefig(plotFolder+f"/tilt_angle_g_dist_{plot_label}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/tilt_angle_g_dist_{plot_label}.pdf",transparent=False,bbox_inches='tight')
     plt.close()
 
-plot_tilt_angles(sensor_measurement_list)
 
-for isensor in sensor_measurement_list:
-    if isensor.g_theta_mean>70:
-    print(f"{isensor.board_type_name}")
+def hist_tilt_angles_B(sensor_measurement_list,bins=np.linspace(-1,90,92),plot_label="all_sensors"):
+    fig = plt.figure(figsize=(8,5))
+    gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
+    ax = fig.add_subplot(gs[0,0])
+    print(f"hist bins {bins}")
+    tilt_angles = []
+    for isensor in sensor_measurement_list:
+        tilt_angles.append(isensor.B_theta_mean)
+    ax.hist(tilt_angles,bins=bins,histtype="step",lw=2.5,alpha=1)
+    mean_tilt = np.mean(tilt_angles)
+    std_tilt = np.std(tilt_angles)
+    ax.text(0.95,0.95,f"mean: {mean_tilt:.1f}\u00b0 \u00B1 {std_tilt:.1f}\u00b0",transform=ax.transAxes,ha="right",va="top",fontsize=16)
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
+    ax.grid(True,alpha=0.6)
+    ax.set_ylabel(r"count", fontsize=20)
+    ax.set_xlabel(f" tilt $\mathrm{{\\theta}}$\u00b0", fontsize=20)
+    plt.savefig(plotFolder+f"/tilt_angle_B_dist_{plot_label}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/tilt_angle_B_dist_{plot_label}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+
+def hist_orientation_angles_B(sensor_measurement_list,bins=np.linspace(-1,90,92),plot_label="all_sensors"):
+    fig = plt.figure(figsize=(8,5))
+    gs = gridspec.GridSpec(nrows=1,ncols=1, figure=fig)
+    ax = fig.add_subplot(gs[0,0])
+    print(f"hist bins {bins}")
+    tilt_angles = []
+    for isensor in sensor_measurement_list:
+        tilt_angles.append(isensor.B_phi_mean)
+    ax.hist(tilt_angles,bins=bins,histtype="step",lw=2.5,alpha=1)
+    mean_tilt = np.mean(tilt_angles)
+    std_tilt = np.std(tilt_angles)
+    ax.text(0.95,0.95,f"mean: {mean_tilt:.1f}\u00b0 \u00B1 {std_tilt:.1f}\u00b0",transform=ax.transAxes,ha="right",va="top",fontsize=16)
+    ax.tick_params(axis='both',which='both', direction='in', labelsize=20)
+    ax.grid(True,alpha=0.6)
+    ax.set_ylabel(r"count", fontsize=20)
+    ax.set_xlabel(f" orientation $\mathrm{{\\phi}}$\u00b0", fontsize=20)
+    plt.savefig(plotFolder+f"/orientation_angle_B_dist_{plot_label}.png",transparent=False,bbox_inches='tight')
+    plt.savefig(plotFolder+f"/orientation_angle_B_dist_{plot_label}.pdf",transparent=False,bbox_inches='tight')
+    plt.close()
+
+hist_tilt_angles_g(sensor_measurement_list,bins=np.linspace(-1,90,92),plot_label="all_sensors")
+hist_tilt_angles_g([i for i in sensor_measurement_list if i.board_type_name in ["mDOM","DEgg","pDOM"]],bins=np.linspace(-360,360,720),plot_label="xDOM")
+hist_tilt_angles_g([i for i in sensor_measurement_list if i.board_type_name in ["mDOM"]],bins=np.linspace(-1,6,29),plot_label="mDOM")
+hist_tilt_angles_g([i for i in sensor_measurement_list if i.board_type_name in ["DEgg"]],bins=np.linspace(-1,6,29),plot_label="DEgg")
+hist_tilt_angles_g([i for i in sensor_measurement_list if i.board_type_name in ["pDOM"]],bins=np.linspace(-1,6,29),plot_label="pDOM")
+
+hist_tilt_angles_B(sensor_measurement_list,bins=np.linspace(-1,90,92),plot_label="all_sensors")
+hist_tilt_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["mDOM","DEgg","pDOM"]],bins=np.linspace(-1,6,29),plot_label="xDOM")
+hist_tilt_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["mDOM"]],bins=np.linspace(-1,90,92),plot_label="mDOM")
+# hist_tilt_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["DEgg"]],bins=np.linspace(-1,6,29),plot_label="DEgg")
+# hist_tilt_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["pDOM"]],bins=np.linspace(-1,6,29),plot_label="pDOM")
+
+hist_orientation_angles_B(sensor_measurement_list,bins=np.linspace(0,360,73),plot_label="all_sensors")
+hist_orientation_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["mDOM","DEgg","pDOM"]],bins=np.linspace(0,360,73),plot_label="xDOM")
+hist_orientation_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["mDOM"]],bins=np.linspace(0,360,73),plot_label="mDOM")
+hist_orientation_angles_B([i for i in sensor_measurement_list if i.board_type_name in ["DEgg"]],bins=np.linspace(0,360,73),plot_label="DEgg")
+
+
+meas_file_list_select = [i for i in meas_file_list if "p5234" in i]
+
+print(f"meas file list select {meas_file_list_select}")
+
+gx_list = []
+gy_list = []
+gz_list = []
+r_list = []
+theta_list = []
+phi_list = []
+
+for ielt in meas_file_list_select:
+    df = pd.read_csv(ielt,header=0,sep=" ")
+    gx,gx_std,gy,gy_std,gz,gz_std,r,r_std,theta,theta_std,phi,phi_std = get_mean_g(df)
+    gx_list.append(gx)
+    gy_list.append(gy)
+    gz_list.append(gz)
+    r_list.append(r)
+    theta_list.append(theta)
+    phi_list.append(phi)
+
+print(f"phi list {phi_list}")

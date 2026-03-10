@@ -111,7 +111,7 @@ def plot_corrected_circle(x,y):
 
   fig, ax = plt.subplots()
   ax.scatter(x, y, label=f"ellipse data")
-  ax.contour(X, Y, Z, [1],label=f"fit")
+  ax.contour(X, Y, Z, [1])
   ax.scatter(x_circ, y_circ, label=f"corrected circle")
   ax.set_aspect("equal")
   ax.grid()

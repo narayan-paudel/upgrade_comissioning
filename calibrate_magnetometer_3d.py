@@ -86,6 +86,7 @@ def circle_from_ellipse(x,y,w):
                   [st,  ct]]) #rotation matrix for ellipse
   S = np.diag([a/r, b/r]) #scale for semi-major and semiminor axes
   A = (R.T)@S@R #to rotate the ellipse to align axes,scale to circle and rotate back
+  print(f"fit parameters A {A} c0 {c0}")
   x_circ = []
   y_circ = []
   for ix,iy in zip(x,y):
